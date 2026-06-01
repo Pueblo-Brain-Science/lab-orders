@@ -1,0 +1,94 @@
+// Google Apps Script — paste this at script.google.com
+// After deploying, copy the Web App URL into index.html (APPS_SCRIPT_URL)
+
+var SHEET_NAME = "Orders";
+
+function getSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow([
+      "ID", "Chemical", "CAS #", "Supplier", "Catalog #",
+      "Quantity", "URL", "Urgency", "Requested By", "Date", "Notes", "Status"
+    ]);
+    sheet.getRange(1, 1, 1, 11).setFontWeight("bold").setBackground("#1a3a5c").setFontColor("white");
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function makeId() {
+  return Math.random().toString(36).substr(2, 8).toUpperCase();
+}
+
+function doPost(e) {
+  var cors = ContentService.createTextOutput();
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action || "add";
+
+    if (action === "add") {
+      var sheet = getSheet();
+      var id = makeId();
+      var row = [
+        id,
+        data.chemical || "",
+        data.cas || "",
+        data.supplier || "",
+        data.catalog || "",
+        data.quantity || "",
+        data.url || "",
+        data.urgency || "Normal",
+        data.requested_by || "",
+        new Date().toLocaleString(),
+        data.notes || "",
+        "Pending"
+      ];
+      sheet.appendRow(row);
+      return respond({ ok: true, id: id });
+    }
+
+    if (action === "status") {
+      var sheet = getSheet();
+      var rows = sheet.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        if (rows[i][0] === data.id) {
+          sheet.getRange(i + 1, 12).setValue(data.status);
+          break;
+        }
+      }
+      return respond({ ok: true });
+    }
+
+  } catch(err) {
+    return respond({ ok: false, error: err.toString() });
+  }
+}
+
+function doGet(e) {
+  var action = e.parameter.action;
+
+  if (action === "list") {
+    var sheet = getSheet();
+    var rows = sheet.getDataRange().getValues();
+    var headers = rows[0];
+    var orders = rows.slice(1).map(function(r) {
+      return {
+        id:           r[0], chemical:  r[1], cas:       r[2],
+        supplier:     r[3], catalog:   r[4], quantity:  r[5],
+        url:          r[6], urgency:   r[7], requested_by: r[8],
+        date:         r[9], notes:     r[10], status:   r[11]
+      };
+    });
+    return respond(orders);
+  }
+
+  return respond({ ok: true, message: "Lab Orders API" });
+}
+
+function respond(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
