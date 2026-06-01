@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Chemical Orders</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f6f9; color: #222; }
+  header { background: #1a3a5c; color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  header h1 { font-size: 1.3rem; font-weight: 600; }
+  .header-links { display: flex; gap: 16px; }
+  header a { color: #a8d0f0; font-size: 0.85rem; text-decoration: none; }
+  header a:hover { text-decoration: underline; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+  .setup-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 0.85rem; line-height: 1.6; }
+  .setup-banner strong { color: #7a5500; }
+  .setup-banner code { background: #ffeaa7; padding: 1px 5px; border-radius: 3px; font-family: monospace; }
+  .setup-banner.hidden { display: none; }
+
+  .card { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); padding: 20px; margin-bottom: 24px; }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #1a3a5c; }
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 0.78rem; font-weight: 500; color: #555; margin-bottom: 4px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid #d0d7e3; border-radius: 5px; font-size: 0.88rem; }
+  textarea { resize: vertical; min-height: 60px; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #1a3a5c; }
+  .btn { padding: 9px 20px; border: none; border-radius: 5px; font-size: 0.88rem; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: #1a3a5c; color: white; }
+  .btn-primary:hover { background: #15304d; }
+  .btn-primary:disabled { background: #aaa; cursor: not-allowed; }
+  .form-actions { margin-top: 14px; display: flex; gap: 10px; align-items: center; }
+  .msg { font-size: 0.82rem; font-weight: 500; }
+  .msg.ok { color: #2a7a2a; }
+  .msg.err { color: #c00; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filters input, .filters select { width: auto; flex: 1; min-width: 140px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  th { background: #f0f4f8; text-align: left; padding: 9px 10px; font-weight: 600; color: #444; border-bottom: 2px solid #d0d7e3; white-space: nowrap; }
+  td { padding: 9px 10px; border-bottom: 1px solid #eaeef3; vertical-align: middle; }
+  tr:hover td { background: #f8fafc; }
+  .empty { text-align: center; color: #999; padding: 32px; }
+
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+  .badge-Pending  { background: #fff3cd; color: #7a5500; }
+  .badge-Ordered  { background: #cce5ff; color: #004085; }
+  .badge-Received { background: #d4edda; color: #155724; }
+  .badge-Urgent   { background: #f8d7da; color: #721c24; }
+  .badge-Normal   { background: #e2e8f0; color: #444; }
+  .badge-Low      { background: #e8f5e9; color: #2e7d32; }
+
+  .status-sel { padding: 4px 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.8rem; cursor: pointer; background: white; }
+  .id-chip { font-family: monospace; font-size: 0.75rem; background: #eee; padding: 1px 5px; border-radius: 3px; color: #666; }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: #1a3a5c; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧪 Lab Chemical Orders</h1>
+  <div class="header-links">
+    <a href="#" id="sheetLink" target="_blank">📊 Open Google Sheet</a>
+    <a href="#" onclick="loadOrders(); return false;">↻ Refresh</a>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Setup banner shown until URL is configured -->
+  <div class="setup-banner" id="setupBanner">
+    <strong>⚙️ One-time setup required:</strong> Open <code>index.html</code>, find <code>APPS_SCRIPT_URL</code> near the top of the &lt;script&gt; tag, and replace it with your deployed Google Apps Script URL.
+    See <a href="SETUP.md">SETUP.md</a> for step-by-step instructions.
+  </div>
+
+  <!-- Request Form -->
+  <div class="card">
+    <h2>Submit New Order Request</h2>
+    <form id="orderForm">
+      <div class="form-grid">
+        <div>
+          <label>Chemical Name *</label>
+          <input name="chemical" required placeholder="e.g. Ethanol">
+        </div>
+        <div>
+          <label>CAS Number</label>
+          <input name="cas" placeholder="e.g. 64-17-5">
+        </div>
+        <div>
+          <label>Supplier</label>
+          <input name="supplier" placeholder="e.g. Sigma-Aldrich">
+        </div>
+        <div>
+          <label>Catalog #</label>
+          <input name="catalog" placeholder="e.g. E7023">
+        </div>
+        <div>
+          <label>Quantity</label>
+          <input name="quantity" placeholder="e.g. 1 L, 500 g">
+        </div>
+        <div>
+          <label>Urgency</label>
+          <select name="urgency">
+            <option value="Normal">Normal</option>
+            <option value="Urgent">Urgent</option>
+            <option value="Low">Low priority</option>
+          </select>
+        </div>
+        <div>
+          <label>Requested By *</label>
+          <input name="requested_by" required placeholder="Your name">
+        </div>
+        <div class="full">
+          <label>Product Link (URL)</label>
+          <input name="url" type="url" placeholder="e.g. https://www.sigmaaldrich.com/…">
+        </div>
+        <div class="full">
+          <label>Notes / Reason</label>
+          <textarea name="notes" placeholder="Why it's needed, storage requirements, etc."></textarea>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submitBtn">Submit Request</button>
+        <span class="msg" id="formMsg"></span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Orders Table -->
+  <div class="card">
+    <h2>Order Tracker</h2>
+    <div class="filters">
+      <input id="search" placeholder="Search chemical, supplier, person…" oninput="renderTable()">
+      <select id="filterStatus" onchange="renderTable()">
+        <option value="">All Statuses</option>
+        <option>Pending</option>
+        <option>Ordered</option>
+        <option>Received</option>
+      </select>
+      <select id="filterUrgency" onchange="renderTable()">
+        <option value="">All Priorities</option>
+        <option>Urgent</option>
+        <option>Normal</option>
+        <option>Low</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Chemical</th><th>CAS</th><th>Supplier</th>
+            <th>Catalog #</th><th>Qty</th><th>Link</th><th>Priority</th>
+            <th>Requested By</th><th>Date</th><th>Notes</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="11" class="empty">Enter the Apps Script URL to load orders.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ─── PASTE YOUR APPS SCRIPT WEB APP URL HERE ───────────────────────────────
+  var APPS_SCRIPT_URL = "";
+  // ────────────────────────────────────────────────────────────────────────────
+
+  // Optional: link directly to your Google Sheet for easy access
+  var SHEET_URL = "";
+
+  var orders = [];
+
+  if (APPS_SCRIPT_URL) {
+    document.getElementById("setupBanner").classList.add("hidden");
+    loadOrders();
+  }
+  if (SHEET_URL) {
+    document.getElementById("sheetLink").href = SHEET_URL;
+  }
+
+  async function loadOrders() {
+    if (!APPS_SCRIPT_URL) return;
+    document.getElementById("tableBody").innerHTML =
+      '<tr><td colspan="12" class="empty"><span class="spinner"></span> Loading…</td></tr>';
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + "?action=list");
+      orders = await res.json();
+      renderTable();
+    } catch(e) {
+      document.getElementById("tableBody").innerHTML =
+        '<tr><td colspan="11" class="empty" style="color:#c00">Could not load orders. Check your Apps Script URL.</td></tr>';
+    }
+  }
+
+  function renderTable() {
+    const q  = document.getElementById("search").value.toLowerCase();
+    const fs = document.getElementById("filterStatus").value;
+    const fu = document.getElementById("filterUrgency").value;
+    const priority = { Pending: 0, Ordered: 1, Received: 2 };
+
+    const filtered = orders
+      .filter(o => {
+        const text = [o.chemical, o.supplier, o.catalog, o.requested_by, o.cas, o.notes].join(" ").toLowerCase();
+        return (!q || text.includes(q)) && (!fs || o.status === fs) && (!fu || o.urgency === fu);
+      })
+      .sort((a, b) => (priority[a.status] ?? 3) - (priority[b.status] ?? 3));
+
+    const tbody = document.getElementById("tableBody");
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="12" class="empty">No orders found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(o => `
+      <tr>
+        <td><span class="id-chip">${esc(o.id)}</span></td>
+        <td><strong>${esc(o.chemical)}</strong></td>
+        <td>${esc(o.cas)}</td>
+        <td>${esc(o.supplier)}</td>
+        <td>${esc(o.catalog)}</td>
+        <td>${esc(o.quantity)}</td>
+        <td>${o.url ? `<a href="${esc(o.url)}" target="_blank" rel="noopener">🔗 Link</a>` : ""}</td>
+        <td><span class="badge badge-${o.urgency}">${esc(o.urgency)}</span></td>
+        <td>${esc(o.requested_by)}</td>
+        <td>${esc(o.date)}</td>
+        <td title="${esc(o.notes)}">${esc(o.notes).substring(0,40)}${(o.notes||"").length>40?"…":""}</td>
+        <td>
+          <select class="status-sel" onchange="updateStatus('${esc(o.id)}', this.value)">
+            ${["Pending","Ordered","Received"].map(s =>
+              `<option${o.status===s?" selected":""}>${s}</option>`
+            ).join("")}
+          </select>
+          <br><span class="badge badge-${o.status}" style="margin-top:4px">${esc(o.status)}</span>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  async function updateStatus(id, status) {
+    if (!APPS_SCRIPT_URL) return;
+    const o = orders.find(x => x.id === id);
+    if (o) o.status = status;
+    renderTable();
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "status", id, status })
+    });
+  }
+
+  document.getElementById("orderForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!APPS_SCRIPT_URL) {
+      showMsg("Please configure APPS_SCRIPT_URL first.", "err");
+      return;
+    }
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "Submitting…";
+    const data = Object.fromEntries(new FormData(e.target));
+    data.action = "add";
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      if (result.ok) {
+        e.target.reset();
+        showMsg("✓ Request submitted! (ID: " + result.id + ")", "ok");
+        await loadOrders();
+      } else {
+        showMsg("Error: " + (result.error || "unknown"), "err");
+      }
+    } catch(err) {
+      showMsg("Network error — check Apps Script URL.", "err");
+    }
+    btn.disabled = false;
+    btn.textContent = "Submit Request";
+  });
+
+  function showMsg(text, type) {
+    const el = document.getElementById("formMsg");
+    el.textContent = text;
+    el.className = "msg " + type;
+    if (type === "ok") setTimeout(() => el.textContent = "", 5000);
+  }
+
+  function esc(s) {
+    return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+</script>
+</body>
+</html>
