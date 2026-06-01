@@ -23,51 +23,7 @@ function makeId() {
 }
 
 function doPost(e) {
-  try {
-    var data = {};
-    if (e.postData && e.postData.contents) {
-      data = JSON.parse(e.postData.contents);
-    } else if (e.parameter && e.parameter.payload) {
-      data = JSON.parse(e.parameter.payload);
-    }
-    var action = data.action || "add";
-
-    if (action === "add") {
-      var sheet = getSheet();
-      var id = makeId();
-      var row = [
-        id,
-        data.chemical || "",
-        data.cas || "",
-        data.supplier || "",
-        data.catalog || "",
-        data.quantity || "",
-        data.url || "",
-        data.urgency || "Normal",
-        data.requested_by || "",
-        new Date().toLocaleString(),
-        data.notes || "",
-        "Pending"
-      ];
-      sheet.appendRow(row);
-      return respond({ ok: true, id: id });
-    }
-
-    if (action === "status") {
-      var sheet = getSheet();
-      var rows = sheet.getDataRange().getValues();
-      for (var i = 1; i < rows.length; i++) {
-        if (rows[i][0] === data.id) {
-          sheet.getRange(i + 1, 12).setValue(data.status);
-          break;
-        }
-      }
-      return respond({ ok: true });
-    }
-
-  } catch(err) {
-    return respond({ ok: false, error: err.toString() });
-  }
+  return doGet(e);
 }
 
 function doGet(e) {
@@ -76,7 +32,6 @@ function doGet(e) {
   if (action === "list") {
     var sheet = getSheet();
     var rows = sheet.getDataRange().getValues();
-    var headers = rows[0];
     var orders = rows.slice(1).map(function(r) {
       return {
         id:           r[0], chemical:  r[1], cas:       r[2],
@@ -86,6 +41,38 @@ function doGet(e) {
       };
     });
     return respond(orders);
+  }
+
+  if (action === "add") {
+    var sheet = getSheet();
+    var id = makeId();
+    sheet.appendRow([
+      id,
+      e.parameter.chemical || "",
+      e.parameter.cas || "",
+      e.parameter.supplier || "",
+      e.parameter.catalog || "",
+      e.parameter.quantity || "",
+      e.parameter.url || "",
+      e.parameter.urgency || "Normal",
+      e.parameter.requested_by || "",
+      new Date().toLocaleString(),
+      e.parameter.notes || "",
+      "Pending"
+    ]);
+    return respond({ ok: true, id: id });
+  }
+
+  if (action === "status") {
+    var sheet = getSheet();
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0] === e.parameter.id) {
+        sheet.getRange(i + 1, 12).setValue(e.parameter.status);
+        break;
+      }
+    }
+    return respond({ ok: true });
   }
 
   return respond({ ok: true, message: "Lab Orders API" });
