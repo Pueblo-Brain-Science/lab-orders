@@ -249,9 +249,8 @@
     const o = orders.find(x => x.id === id);
     if (o) o.status = status;
     renderTable();
-    await fetch(APPS_SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "status", id, status })
+    await fetch(APPS_SCRIPT_URL + "?payload=" + encodeURIComponent(JSON.stringify({ action: "status", id, status })), {
+      method: "POST"
     });
   }
 
@@ -267,9 +266,8 @@
     const data = Object.fromEntries(new FormData(e.target));
     data.action = "add";
     try {
-      const res = await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify(data)
+      const res = await fetch(APPS_SCRIPT_URL + "?payload=" + encodeURIComponent(JSON.stringify(data)), {
+        method: "POST"
       });
       const result = await res.json();
       if (result.ok) {

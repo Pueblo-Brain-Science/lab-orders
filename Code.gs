@@ -23,9 +23,13 @@ function makeId() {
 }
 
 function doPost(e) {
-  var cors = ContentService.createTextOutput();
   try {
-    var data = JSON.parse(e.postData.contents);
+    var data = {};
+    if (e.postData && e.postData.contents) {
+      data = JSON.parse(e.postData.contents);
+    } else if (e.parameter && e.parameter.payload) {
+      data = JSON.parse(e.parameter.payload);
+    }
     var action = data.action || "add";
 
     if (action === "add") {
