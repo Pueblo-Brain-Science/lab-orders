@@ -132,8 +132,19 @@
     </form>
   </div>
 
+  <!-- Tracker Lock -->
+  <div class="card" id="trackerLock">
+    <h2>🔒 Order Tracker</h2>
+    <p style="font-size:0.88rem;color:#555;margin-bottom:12px;">Enter the password to view and manage orders.</p>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <input type="password" id="trackerPassword" placeholder="Password" style="max-width:220px;" onkeydown="if(event.key==='Enter')unlockTracker()">
+      <button class="btn btn-primary" onclick="unlockTracker()">Unlock</button>
+      <span id="lockMsg" style="font-size:0.82rem;color:#c00;"></span>
+    </div>
+  </div>
+
   <!-- Orders Table -->
-  <div class="card">
+  <div class="card" id="trackerSection" style="display:none;">
     <h2>Order Tracker</h2>
     <div class="filters">
       <input id="search" placeholder="Search chemical, supplier, person…" oninput="renderTable()">
@@ -169,6 +180,21 @@
 </div>
 
 <script>
+  // ─── SET YOUR TRACKER PASSWORD HERE ─────────────────────────────────────────
+  var TRACKER_PASSWORD = "FlylabNM";
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  function unlockTracker() {
+    const input = document.getElementById("trackerPassword").value;
+    if (input === TRACKER_PASSWORD) {
+      document.getElementById("trackerLock").style.display = "none";
+      document.getElementById("trackerSection").style.display = "block";
+      loadOrders();
+    } else {
+      document.getElementById("lockMsg").textContent = "Incorrect password.";
+    }
+  }
+
   // ─── PASTE YOUR APPS SCRIPT WEB APP URL HERE ───────────────────────────────
   var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxtf-Y8kJQjPTuLj9XY9FJnEeGHV8aXmRoudoEsdzy24O1gf9vf8RmYf45V5qn5zHYY/exec";
   // ────────────────────────────────────────────────────────────────────────────
@@ -180,7 +206,6 @@
 
   if (APPS_SCRIPT_URL) {
     document.getElementById("setupBanner").classList.add("hidden");
-    loadOrders();
   }
   if (SHEET_URL) {
     document.getElementById("sheetLink").href = SHEET_URL;
